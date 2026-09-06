@@ -73,14 +73,14 @@
 }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden}
+html,body{height:100%;height:100dvh;overflow:hidden}
 body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;overscroll-behavior:none;touch-action:pan-x pan-y}
 html{overscroll-behavior:none}
 .page{overscroll-behavior:contain}
 .mb{overscroll-behavior:contain}
 .fd{font-family:'Sora',sans-serif;font-weight:800}
 .hidden{display:none!important}
-.screen{display:none;height:100vh;flex-direction:column;overflow:hidden}
+.screen{display:none;height:100vh;height:100dvh;flex-direction:column;overflow:hidden}
 .screen.active{display:flex}
 .page{display:none;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:96px}
 .page.active{display:block}
@@ -1174,7 +1174,7 @@ async function doLogin(){
   if(phRaw==='admin'){openAdminLogin();return;}
   // Normalise phone — remove spaces, dashes, +258 prefix
   const ph=phRaw.replace(/[\s\-]/g,'').replace(/^(\+?258)/,'');
-  const btn=document.querySelector('#af-login .btn.bg');
+  const btn=document.querySelector('#af-login .btn.sa-btn');
   if(btn){btn.disabled=true;btn.textContent='A entrar...';}
   if(!window.firebaseDB){
     if(btn){btn.disabled=false;btn.textContent='→ Entrar na Conta';}
