@@ -702,6 +702,9 @@ html{overscroll-behavior:none}
   <!-- WEEKEND BANNER -->
   <div id="weekend-bar" style="margin:0 16px 12px"></div>
 
+  <!-- DAILY TASK -->
+  <div id="task-area" style="margin:0 16px 12px"></div>
+
   <!-- STATS 2x2 GRID -->
   <div class="stats-grid">
     <div class="stat-card">
@@ -1143,7 +1146,7 @@ async function doRegister(){
   const nm=document.getElementById('r-nm').value.trim();
   const ph=document.getElementById('r-ph').value.trim();
   const pw=document.getElementById('r-pw').value;
-  const rf=document.getElementById('r-rf').value.trim().toUpperCase();
+  const rf=(document.getElementById('r-rf')?.value||'').trim().toUpperCase();
   if(!nm||!ph||!pw)return toast('Preenche todos os campos','err');
   if(ph.length<8)return toast('Número inválido','err');
   if(pw.length<6)return toast('Senha mínima 6 caracteres','err');
@@ -1220,7 +1223,7 @@ async function loginUser(u){
     console.error('Erro ao carregar o app —', e);
     STATE.user=null;
     showScreen('sa');
-    toast('Erro ao carregar a conta. Tenta entrar novamente.','err');
+    toast('Erro: '+(e&&e.message?e.message:e),'err');
     return;
   }
   // Apply daily earnings in background without blocking login
@@ -1239,22 +1242,24 @@ function doLogout(){
 function renderApp(){
   const u=STATE.user;if(!u)return;
   const lv=LEVELS.find(l=>l.id==u.level);
-  document.getElementById('d-name').textContent=u.name;try{document.getElementById('d-pname').textContent=u.name;document.getElementById('d-pphone').textContent='+258 '+u.phone;document.getElementById('d-code2').textContent=u.code||'—';document.getElementById('d-refs').textContent=u.refs||0;document.getElementById('d-totalw').textContent=fmt(u.totalWithdrawn||0);var av1=document.getElementById('d-avatar');var av2=document.getElementById('d-avatar2');var ini=(u.name||'?')[0].toUpperCase();if(av1)av1.textContent=ini;if(av2)av2.textContent=ini;}catch(e){}
-  document.getElementById('d-phone').textContent='+258 '+u.phone;
+  document.getElementById('d-name').textContent=u.name;
   document.getElementById('d-bal').textContent=fmt(u.balance);
-  document.getElementById('d-earned').textContent=fmt(u.totalEarned);
-  document.getElementById('d-comm').textContent=fmt(u.commission);
-  document.getElementById('d-lvl-name').textContent=lv?lv.name:'Sem VIP';
-  document.getElementById('d-lvl-num').textContent=lv?lv.name:'—';
+  try{
+    document.getElementById('d-pname').textContent=u.name;
+    document.getElementById('d-pphone').textContent='+258 '+u.phone;
+    document.getElementById('d-code2').textContent=u.code||'—';
+    document.getElementById('d-refs').textContent=u.refs||0;
+    document.getElementById('d-totalw').textContent=fmt(u.totalWithdrawn||0);
+    var av1=document.getElementById('d-avatar');var av2=document.getElementById('d-avatar2');var ini=(u.name||'?')[0].toUpperCase();
+    if(av1)av1.textContent=ini;if(av2)av2.textContent=ini;
+    var pb=document.getElementById('d-pbadge');
+    if(pb)pb.innerHTML=`<svg viewBox="0 0 24 24" fill="currentColor" width="11" height="11"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> ${lv?lv.name.toUpperCase():'SEM VIP'}`;
+  }catch(e){}
   document.getElementById('w-bal').textContent=fmt(u.balance);
   document.getElementById('r-code').textContent=u.code;
   document.getElementById('r-cnt').textContent=u.refs||0;
   document.getElementById('r-act').textContent=u.refsActive||0;
   document.getElementById('r-earn').textContent=fmt(u.refEarnings||0)+' MT';
-  document.getElementById('p-av').textContent=u.name.charAt(0).toUpperCase();
-  document.getElementById('p-nm').textContent=u.name;
-  document.getElementById('p-ph').textContent='+258 '+u.phone;
-  document.getElementById('p-badge').innerHTML=`<svg viewBox="0 0 24 24" fill="currentColor" width="11" height="11"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> ${lv?lv.name.toUpperCase():'SEM VIP'}`;
 
   // Earnings stats
   renderEarningsStats(u, lv);
@@ -1266,26 +1271,18 @@ function renderApp(){
 }
 
 function renderEarningsStats(u, lv) {
-  // Daily gain from this level
-  const dailyGain = lv ? lv.daily : 0;
-  // Total withdrawn
-  const totalWth = STATE.withdrawals.filter(w=>w.userId===u.id&&w.status==='approved').reduce((s,w)=>s+w.amount,0);
-  document.getElementById('d-total-withdrawn').textContent = fmt(totalWth);
-
   // Calculate period earnings from deposit history
-  const now = Date.now();
   const startOfToday = new Date(); startOfToday.setHours(0,0,0,0);
   const startOfYesterday = new Date(startOfToday); startOfYesterday.setDate(startOfYesterday.getDate()-1);
   const startOfWeek = new Date(startOfToday); startOfWeek.setDate(startOfWeek.getDate()-startOfWeek.getDay());
-  const startOfMonth = new Date(startOfToday); startOfMonth.setDate(1);
 
   const rewards = STATE.deposits.filter(d=>d.userId===u.id&&d.isReward&&d.status==='approved');
   const sum = (from, to) => rewards.filter(d=>d.date>=from&&(to?d.date<to:true)).reduce((s,d)=>s+d.amount,0);
 
-  document.getElementById('d-today-earn').textContent = fmt(sum(startOfToday.getTime()));
-  document.getElementById('d-yesterday-earn').textContent = fmt(sum(startOfYesterday.getTime(), startOfToday.getTime()));
-  document.getElementById('d-week-earn').textContent = fmt(sum(startOfWeek.getTime()));
-  document.getElementById('d-month-earn').textContent = fmt(sum(startOfMonth.getTime()));
+  document.getElementById('d-earn-total').textContent = fmt(u.totalEarned)+' MT';
+  document.getElementById('d-earn-today').textContent = fmt(sum(startOfToday.getTime()))+' MT';
+  document.getElementById('d-earn-yest').textContent = fmt(sum(startOfYesterday.getTime(), startOfToday.getTime()))+' MT';
+  document.getElementById('d-earn-week').textContent = fmt(sum(startOfWeek.getTime()))+' MT';
 }
 
 function renderHomeNotice(lv){
