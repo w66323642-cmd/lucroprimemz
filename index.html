@@ -809,7 +809,7 @@ html{overscroll-behavior:none}
         <div class="cf-step"><div class="cf-num">3</div><div class="cf-txt">Após aprovação, o teu saldo é activado com <strong>20% de rendimento diário automático</strong>.</div></div>
         <div class="cf-step"><div class="cf-num">4</div><div class="cf-txt">Completa a <strong>tarefa diária</strong> (partilhar o link) para ganhar bónus extra de 30 MT.</div></div>
         <div class="cf-step"><div class="cf-num">5</div><div class="cf-txt">Convida amigos e ganha <strong>50 MT de comissão</strong> por cada referido activo.</div></div>
-        <div class="cf-step"><div class="cf-num">6</div><div class="cf-txt">O saque fica disponível no <strong>último dia do teu pacote VIP</strong>, após liberação pelo admin.</div></div>
+        <div class="cf-step"><div class="cf-num">6</div><div class="cf-txt">O saque fica disponível automaticamente no <strong>último dia do teu pacote VIP</strong>.</div></div>
         <div class="cf-step"><div class="cf-num">7</div><div class="cf-txt">Cada VIP permite <strong>1 saque único</strong> no último dia do pacote.</div></div>
       </div>
       <div class="cf-card"><h4>🏆 Tabela de VIPs</h4>
@@ -1045,8 +1045,8 @@ function renderWeekendBar() {
   const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
   if (daysLeft > 0) {
     el.innerHTML = `<div class="weekend-banner"><div class="wb-label">⏳ ${lv.name} ACTIVO</div><div class="wb-title">Poderás sacar daqui a ${daysLeft} dia${daysLeft > 1 ? 's' : ''}</div><div class="wb-sub">Dia ${lv.durationDays - daysLeft + 1} de ${lv.durationDays} · Lucro total: ${fmt(lv.totalProfit)} MT</div></div>`;
-  } else if (!u.withdrawalReleased) {
-    el.innerHTML = `<div class="weekend-banner" style="background:linear-gradient(135deg,rgba(16,185,129,0.1),rgba(16,185,129,0.05))"><div class="wb-label">🔔 PACOTE CONCLUÍDO</div><div class="wb-title">A aguardar liberação do admin</div><div class="wb-sub">O admin irá liberar o teu saque em breve</div></div>`;
+  } else if ((u.withdrawCount||0) >= 1) {
+    el.innerHTML = `<div class="weekend-banner" style="opacity:.7"><div class="wb-label">✓ SAQUE JÁ REALIZADO</div><div class="wb-title">Renova o VIP para continuar a ganhar</div><div class="wb-sub">${lv.name} concluído</div></div>`;
   } else {
     el.innerHTML = `<div class="weekend-banner" style="background:linear-gradient(135deg,rgba(34,197,94,0.15),rgba(34,197,94,0.05))"><div class="wb-label">✅ SAQUE DISPONÍVEL</div><div class="wb-title">Podes sacar agora! 🎉</div><div class="wb-sub">Lucro total de ${fmt(lv.totalProfit)} MT disponível</div></div>`;
   }
@@ -1404,14 +1404,14 @@ function openWithdraw(){
     const depBase=STATE.deposits.filter(d=>d.userId===u.id&&d.status==='approved'&&!d.isReward&&!d.isRef).sort((a,b)=>a.date-b.date)[0];
     const wCount=u.withdrawCount||0;
     const jaExpirou=depBase&&(Date.now()>depBase.date+(lv.durationDays*24*60*60*1000));
-    const jaDisponivel=depBase&&(Date.now()>=depBase.date+((lv.durationDays-1)*24*60*60*1000))&&u.withdrawalReleased===true;
+    const jaDisponivel=depBase&&(Date.now()>=depBase.date+((lv.durationDays-1)*24*60*60*1000))&&(u.withdrawCount||0)<1;
     const daysLeft=depBase?Math.max(0,Math.ceil(((depBase.date+(lv.durationDays*24*60*60*1000))-Date.now())/(1000*60*60*24))):0;
     const renovAlert=wCount>=1
       ?`<div class="notice notice-red" style="margin-bottom:10px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><p><strong>Saque já realizado!</strong> Renova o teu VIP para continuar a ganhar.</p></div>`
       :jaExpirou&&wCount<1
       ?`<div class="notice notice-red" style="margin-bottom:10px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><p><strong>Prazo expirado!</strong> Os ${lv.durationDays} dias do ${lv.name} terminaram. Renova o VIP.</p></div>`
       :'';
-    el.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div class="lim-stat"><div class="lim-stat-v" style="color:var(--gold)">${fmt(lv.totalProfit)} MT</div><div class="lim-stat-l">Lucro Total</div></div><div class="lim-stat"><div class="lim-stat-v" style="color:${jaDisponivel?'var(--green)':'var(--gold)'}">${jaDisponivel?'Disponível':daysLeft+'d restantes'}</div><div class="lim-stat-l">Saque</div></div></div><div style="background:var(--surface2);border-radius:10px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--text3)">📅 <strong style="color:var(--text)">Saque disponível no dia ${lv.durationDays}</strong> · 1 saque único do lucro total</div>${renovAlert}<div class="notice notice-green" style="margin-bottom:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><p>${u.withdrawalReleased?'✅ Saque liberado! Lucro total:':'⏳ A aguardar liberação pelo admin.'} ${u.withdrawalReleased?`<strong>${fmt(lv.totalProfit)} MT</strong> · Saldo: <strong>${fmt(u.balance)} MT</strong>.`:''}</p></div>`;
+    el.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div class="lim-stat"><div class="lim-stat-v" style="color:var(--gold)">${fmt(lv.totalProfit)} MT</div><div class="lim-stat-l">Lucro Total</div></div><div class="lim-stat"><div class="lim-stat-v" style="color:${jaDisponivel?'var(--green)':'var(--gold)'}">${jaDisponivel?'Disponível':daysLeft+'d restantes'}</div><div class="lim-stat-l">Saque</div></div></div><div style="background:var(--surface2);border-radius:10px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--text3)">📅 <strong style="color:var(--text)">Saque disponível no dia ${lv.durationDays}</strong> · 1 saque único do lucro total</div>${renovAlert}<div class="notice notice-green" style="margin-bottom:14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><p>${jaDisponivel?'✅ Saque liberado! Lucro total:':'⏳ Ainda dentro do prazo do pacote.'} ${jaDisponivel?`<strong>${fmt(lv.totalProfit)} MT</strong> · Saldo: <strong>${fmt(u.balance)} MT</strong>.`:''}</p></div>`;
   }
   document.getElementById('mo-withdraw').classList.add('active');
 }
@@ -1422,7 +1422,6 @@ async function submitWithdraw(){
   const method=document.getElementById('w-method').value;
   const ph=document.getElementById('w-ph').value.trim();
   if(!lv)return toast('Activa um VIP primeiro','err');
-  if(!u.withdrawalReleased)return toast('⏳ Saque ainda não foi liberado pelo admin. Aguarda a notificação.','err');
   if(!amt||amt<=0)return toast('Indica o valor a sacar','err');
   if(amt>u.balance)return toast('Saldo insuficiente','err');
   if(!ph)return toast('Indica o número para receber','err');
@@ -1434,10 +1433,10 @@ async function submitWithdraw(){
   if(Date.now()<lastDay){const dLeft=Math.ceil((lastDay-Date.now())/(1000*60*60*24));closeMo('mo-withdraw');toast(`⏳ Saque disponível no dia ${lv.durationDays}. Faltam ${dLeft} dia${dLeft>1?'s':''}.`,'err');return;}
   const withdrawal={id:Date.now(),userId:u.id,userName:u.name,userPhone:u.phone,amount:amt,method,toPhone:ph,status:'pending',date:Date.now()};
   await saveWithdrawalToFirebase(withdrawal);
-  u.withdrawCount=1;
-  await updateUserInFirebase(u.id,{withdrawCount:u.withdrawCount,withdrawalReleased:false});
+  u.withdrawCount=1;u.level=0;
+  await updateUserInFirebase(u.id,{withdrawCount:u.withdrawCount,level:0});
   closeMo('mo-withdraw');await loadFirebaseData();renderApp();
-  toast(`Pedido de saque ${fmt(amt)} MT enviado! ✓`,'ok');
+  toast(`Pedido de saque ${fmt(amt)} MT enviado! VIP desactivado — renova para continuar a ganhar.`,'ok');
 }
 
 // ════════════════════════════════════════════
@@ -1550,8 +1549,9 @@ function renderAdContent(){
     el.innerHTML=STATE.users.sort((a,b)=>b.joinTs-a.joinTs).map(u=>{const ulv=LEVELS.find(l=>l.id==u.level);const depBase=STATE.deposits.filter(d=>d.userId===u.id&&d.status==='approved'&&!d.isReward&&!d.isRef).sort((a,b)=>a.date-b.date)[0];
       const ulvObj=LEVELS.find(l=>l.id==u.level);
       const daysLeft=depBase&&ulvObj?Math.max(0,Math.ceil(((depBase.date+(ulvObj.durationDays*24*60*60*1000))-Date.now())/(1000*60*60*24))):null;
-      const podeLiberar=u.level&&depBase&&daysLeft===0&&u.withdrawCount<1;
-      return`<div class="adcard"><div class="adcard-top"><div><div class="adcard-name">${u.name}</div><div class="adcard-sub">+258 ${u.phone} · ${u.code}</div><div class="adcard-sub">Entrou: ${u.joinDate} · VIP: ${u.level||'Sem VIP'}${daysLeft!==null?' · '+daysLeft+'d restantes':''}</div></div><div style="text-align:right"><div class="adcard-amt">${fmt(u.balance)} MT</div><div style="font-size:10px;color:var(--text3);margin-top:4px">${u.refs||0} refs · ${u.withdrawCount||0}/1 saque · ${u.withdrawalReleased?'<span style="color:var(--green)">✓ Liberado</span>':'<span style="color:var(--gold)">⏳ Bloqueado</span>'}</div></div></div>${podeLiberar&&!u.withdrawalReleased?`<div class="adcard-btns"><button class="btn bgreen" onclick="releaseWithdrawal('${u.id}')">💰 Liberar Saque</button></div>`:u.withdrawalReleased?`<div class="adcard-btns"><button class="btn br" onclick="lockWithdrawal('${u.id}')">🔒 Bloquear</button></div>`:''}</div>`}).join('');
+      const saqueDisponivel=u.level&&depBase&&daysLeft===0&&(u.withdrawCount||0)<1;
+      const jaSacou=(u.withdrawCount||0)>=1;
+      return`<div class="adcard"><div class="adcard-top"><div><div class="adcard-name">${u.name}</div><div class="adcard-sub">+258 ${u.phone} · ${u.code}</div><div class="adcard-sub">Entrou: ${u.joinDate} · VIP: ${u.level||'Sem VIP'}${daysLeft!==null?' · '+daysLeft+'d restantes':''}</div></div><div style="text-align:right"><div class="adcard-amt">${fmt(u.balance)} MT</div><div style="font-size:10px;color:var(--text3);margin-top:4px">${u.refs||0} refs · ${u.withdrawCount||0}/1 saque · ${jaSacou?'<span style="color:var(--text3)">✓ Já sacou</span>':saqueDisponivel?'<span style="color:var(--green)">✓ Disponível</span>':'<span style="color:var(--gold)">⏳ Em curso</span>'}</div></div></div></div>`}).join('');
   }else{
     const news=STATE.deposits.filter(d=>d.status==='pending'&&d.levelName).sort((a,b)=>b.date-a.date);
     if(!news.length){el.innerHTML=`<div class="empty"><p>Sem novas adesões pendentes</p></div>`;return;}
@@ -1559,30 +1559,14 @@ function renderAdContent(){
   }
 }
 
-async function releaseWithdrawal(userId){
-  const u=STATE.users.find(x=>x.id===userId);
-  if(!u)return toast('Utilizador não encontrado','err');
-  u.withdrawalReleased=true;
-  await updateUserInFirebase(u.id,{withdrawalReleased:true});
-  await loadFirebaseData();adStats();renderAdContent();
-  toast(`✅ Saque liberado para ${u.name}`,'ok');
-}
-async function lockWithdrawal(userId){
-  const u=STATE.users.find(x=>x.id===userId);
-  if(!u)return toast('Utilizador não encontrado','err');
-  u.withdrawalReleased=false;
-  await updateUserInFirebase(u.id,{withdrawalReleased:false});
-  await loadFirebaseData();adStats();renderAdContent();
-  toast(`🔒 Saque bloqueado para ${u.name}`,'ok');
-}
 async function appDep(id){
   await loadFirebaseData();const d=STATE.deposits.find(d=>d.id==id);if(!d)return;
   const now=Date.now();d.status='approved';d.approvedAt=now;await saveDepositToFirebase(d);
   const u=STATE.users.find(u=>u.id===d.userId);
   if(u){
     u.level=Number(d.levelId);u.refsActive=u.refsActive||0;
-    u.lastDailyPaid=now;u.withdrawCount=0;u.withdrawalReleased=false;
-    await updateUserInFirebase(u.id,{level:u.level,refsActive:u.refsActive,withdrawCount:0,withdrawalReleased:false,lastDailyPaid:u.lastDailyPaid});
+    u.lastDailyPaid=now;u.withdrawCount=0;
+    await updateUserInFirebase(u.id,{level:u.level,refsActive:u.refsActive,withdrawCount:0,lastDailyPaid:u.lastDailyPaid});
     // Dar bónus ao quem convidou apenas no primeiro depósito aprovado
     const prevDeps=STATE.deposits.filter(dep=>dep.userId===u.id&&dep.status==='approved'&&!dep.isReward&&!dep.isRef&&dep.id!=id);
     if(prevDeps.length===0&&u.refCode){
